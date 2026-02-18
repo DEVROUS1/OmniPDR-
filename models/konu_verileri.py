@@ -30,21 +30,44 @@ TYT_KONULARI: Dict[str, List[str]] = {
         "Kümeler", "Fonksiyonlar", "Permütasyon-Kombinasyon",
         "Olasılık", "İstatistik (Ortalama-Medyan)", "Veri Yorumlama",
     ],
-    "Sosyal Bilimler": [
+    "Tarih": [
         "Tarih Bilimi", "İlk Çağ Uygarlıkları", "İlk Türk Devletleri",
-        "İslam Tarihi", "Osmanlı Kuruluş", "Osmanlı Yükselme",
-        "Coğrafya – Harita Bilgisi", "Coğrafya – İklim",
-        "Coğrafya – Nüfus", "Coğrafya – Türkiye Fiziki",
-        "Felsefe – Bilgi Felsefesi", "Felsefe – Ahlak Felsefesi",
-        "Din – İbadetler", "Din – Hz. Muhammed'in Hayatı",
+        "İslam Tarihi", "Türk-İslam Tarihi", "Osmanlı Kuruluş", "Osmanlı Yükselme",
+        "Osmanlı Kültür ve Uygarlığı", "XX. Yüzyıl Başlarında Osmanlı",
+        "Kurtuluş Savaşı Hazırlık", "Kurtuluş Savaşı Cepheler", "Türk İnkılabı",
+        "Atatürkçülük ve İlkeleri", "Türk Dış Politikası",
     ],
-    "Fen Bilimleri": [
-        "Fizik – Kuvvet ve Hareket", "Fizik – Enerji",
-        "Fizik – Elektrik", "Fizik – Optik", "Fizik – Dalgalar",
-        "Kimya – Atom ve Periyodik Tablo", "Kimya – Kimyasal Bağlar",
-        "Kimya – Madde ve Özellikleri", "Kimya – Asit-Baz",
-        "Biyoloji – Hücre", "Biyoloji – Canlıların Sınıflandırılması",
-        "Biyoloji – Sistemler (Sindirim)", "Biyoloji – Ekosistem",
+    "Coğrafya": [
+        "Doğa ve İnsan", "Dünya'nın Şekli ve Hareketleri", "Coğrafi Konum",
+        "Harita Bilgisi", "Atmosfer ve İklim", "Sıcaklık-Basınç-Rüzgar",
+        "Nem ve Yağış", "İklim Tipleri", "İç ve Dış Kuvvetler",
+        "Nüfus ve Yerleşme", "Türkiye'nin Yer şekilleri", "Ekonomik Faaliyetler",
+        "Bölgeler ve Ulaşım", "Doğal Afetler",
+    ],
+    "Felsefe": [
+        "Felsefenin Konusu", "Bilgi Felsefesi", "Varlık Felsefesi",
+        "Ahlak Felsefesi", "Sanat Felsefesi", "Din Felsefesi",
+        "Siyaset Felsefesi", "Bilim Felsefesi",
+    ],
+    "Din Kültürü": [
+        "İnanç", "İbadet", "Ahlak ve Değerler", "Din, Kültür ve Medeniyet",
+        "Hz. Muhammed (S.A.V.)", "Vahiy ve Akıl", "İslam ve Bilim",
+    ],
+    "Fizik": [
+        "Fizik Bilimine Giriş", "Madde ve Özellikleri", "Hareket ve Kuvvet",
+        "İş, Güç ve Enerji", "Isı ve Sıcaklık", "Elektrostatik",
+        "Elektrik ve Manyetizma", "Basınç ve Kaldırma Kuvveti",
+        "Dalgalar", "Optik",
+    ],
+    "Kimya": [
+        "Kimya Bilimi", "Atom ve Periyodik Sistem", "Kimyasal Türler Arası Etkileşimler",
+        "Maddenin Halleri", "Doğa ve Kimya", "Kimyanın Temel Kanunları",
+        "Kimyasal Hesaplamalar", "Karışımlar", "Asitler, Bazlar ve Tuzlar",
+        "Kimya Her Yerde",
+    ],
+    "Biyoloji": [
+        "Yaşam Bilimi Biyoloji", "Hücre", "Canlıların Dünyası (Sınıflandırma)",
+        "Hücre Bölünmeleri", "Kalıtım", "Ekosistem Ekolojisi",
     ],
 }
 

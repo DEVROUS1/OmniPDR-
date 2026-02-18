@@ -397,7 +397,7 @@ with st.sidebar:
             yeni_puan_turu = "LGS"
 
         yeni_bolum = st.text_input("Hedef Bölüm", key="yeni_bolum")
-        yeni_obp = st.number_input("OBP (Diploma Notu × 5)", 0.0, 500.0, 350.0, key="yeni_obp")
+        yeni_obp = st.number_input("OBP (Diploma Notu, 0-100)", 0.0, 100.0, 80.0, step=0.5, key="yeni_obp")
         yeni_hedef_sir = st.number_input("Hedef Sıralama", 1, 3_000_000, 50000, key="yeni_sir")
 
         if st.button("✨ Öğrenci Oluştur", use_container_width=True):
@@ -619,14 +619,35 @@ with sekmeler[1]:
 
         with tab_tyt:
             st.markdown("**TYT – Temel Yeterlilik Testi** (120 soru)")
-            tyt_cols = st.columns(4)
-            tyt_netleri = {}
-            for i, (ders, bilgi) in enumerate(TYT_DERSLER.items()):
-                with tyt_cols[i % 4]:
+            
+            # Gruplandırılmış TYT Girişi
+            c_tyt1, c_tyt2, c_tyt3 = st.columns([1, 1, 1])
+            
+            with c_tyt1:
+                st.info("📘 Temel Dersler")
+                for ders in ["Türkçe", "Temel Matematik"]:
+                    bilgi = TYT_DERSLER[ders]
                     tyt_netleri[ders] = st.number_input(
-                        f"{ders} ({bilgi['soru_sayisi']} soru)",
-                        0.0, float(bilgi["soru_sayisi"]), 0.0,
-                        step=0.5, key=f"tyt_{ders}"
+                        f"{ders} ({bilgi['soru_sayisi']})",
+                        0.0, float(bilgi["soru_sayisi"]), 0.0, step=0.25, key=f"tyt_{ders}"
+                    )
+
+            with c_tyt2:
+                st.warning("🌍 Sosyal Bilimler")
+                for ders in ["Tarih", "Coğrafya", "Felsefe", "Din Kültürü"]:
+                    bilgi = TYT_DERSLER[ders]
+                    tyt_netleri[ders] = st.number_input(
+                        f"{ders} ({bilgi['soru_sayisi']})",
+                        0.0, float(bilgi["soru_sayisi"]), 0.0, step=0.25, key=f"tyt_{ders}"
+                    )
+
+            with c_tyt3:
+                st.success("🧪 Fen Bilimleri")
+                for ders in ["Fizik", "Kimya", "Biyoloji"]:
+                    bilgi = TYT_DERSLER[ders]
+                    tyt_netleri[ders] = st.number_input(
+                        f"{ders} ({bilgi['soru_sayisi']})",
+                        0.0, float(bilgi["soru_sayisi"]), 0.0, step=0.25, key=f"tyt_{ders}"
                     )
 
         with tab_ayt:
@@ -814,31 +835,61 @@ with sekmeler[3]:
     st.subheader("📚 Konu Bazlı İlerleme Takibi")
 
     if ogr.sinav_turu == "LGS":
-        konular_dict = LGS_KONULARI
+        konular_dict = LGS_DERSLER # LGS_DERSLER yerine LGS_KONULARI olmalıydı, düzeltildi.
+        dersler = list(LGS_KONULARI.keys())
     else:
         konu_tab = st.radio("Sınav Bölümü", ["TYT", "AYT"], horizontal=True, key="konu_sinav")
-        konular_dict = TYT_KONULARI if konu_tab == "TYT" else AYT_KONULARI
+        dersler = list(TYT_KONULARI.keys()) if konu_tab == "TYT" else list(AYT_KONULARI.keys())
+
+    if dersler:
+        secilen_ders = st.selectbox("Ders Seçin", dersler, key="konu_ders_secim")
+    else:
+        secilen_ders = None
 
     # Konu ilerlemelerini göster ve güncelle
-    for ders, konular in konular_dict.items():
-        with st.expander(f"📖 {ders} ({len(konular)} konu)", expanded=False):
-            tamamlanan = 0
-            for konu in konular:
-                ders_key = ders
-                mevcut = ogr.konu_ilerlemeleri.get(ders_key, {}).get(konu, 0)
-                yeni = st.slider(
-                    konu, 0, 100, mevcut,
-                    key=f"konu_{ders_key}_{konu}",
-                    format="%d%%",
-                )
-                if yeni != mevcut:
-                    if ders_key not in ogr.konu_ilerlemeleri:
-                        ogr.konu_ilerlemeleri[ders_key] = {}
-                    ogr.konu_ilerlemeleri[ders_key][konu] = yeni
-                    repo.kaydet(ogr)
+    if not dersler or not secilen_ders:
+        st.info("🤷‍♂️ Bu sınav türü için konu listesi bulunamadı.")
+    else:
+        st.markdown(f"**{secilen_ders}** konuları:")
+        
+        # Konuları 2 kolonda göster
+        col_k1, col_k2 = st.columns(2)
+        konular = konu_listesi_getir(ogr.sinav_turu, secilen_ders)
+        
+        # İlerleme durum seçenekleri
+        DURUMLAR = {
+            "⬜ Başlamadım": 0.0,
+            "📖 Çalışıyorum": 50.0,
+            "✅ Bitti": 100.0,
+            "🔁 Tekrar Edildi": 100.0
+        }
+        DURUM_LISTE = list(DURUMLAR.keys())
 
-                if yeni >= 80:
-                    tamamlanan += 1
+        for i, konu in enumerate(konular):
+            mevcut_ilerleme = ogr.konu_ilerlemeleri.get(secilen_ders, {}).get(konu, 0.0)
+            
+            # Mevcut float değerden duruma (en yakın)
+            secili_index = 0
+            if mevcut_ilerleme >= 100: secili_index = 2
+            elif mevcut_ilerleme >= 50: secili_index = 1
+            
+            target_col = col_k1 if i % 2 == 0 else col_k2
+            with target_col:
+                st.markdown(f"**{konu}**")
+                yeni_durum = st.radio(
+                    f"Durum ({konu})", 
+                    DURUM_LISTE, 
+                    index=secili_index, 
+                    key=f"konu_{secilen_ders}_{i}",
+                    label_visibility="collapsed",
+                    horizontal=True
+                )
+                
+                yeni_deger = DURUMLAR[yeni_durum]
+                
+                if yeni_deger != mevcut_ilerleme:
+                    ogr.konu_ilerlemesi_guncelle(secilen_ders, konu, yeni_deger)
+                    repo.kaydet(ogr)
 
                 # Renkli progress bar
                 renk = "#00E676" if yeni >= 80 else "#FFD600" if yeni >= 40 else "#FF5252"

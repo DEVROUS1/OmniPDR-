@@ -25,8 +25,13 @@ from typing import Dict, List, Optional, Tuple
 TYT_DERSLER = {
     "Türkçe":            {"soru_sayisi": 40, "katsayi": 3.3},
     "Temel Matematik":   {"soru_sayisi": 40, "katsayi": 3.3},
-    "Sosyal Bilimler":   {"soru_sayisi": 20, "katsayi": 3.4},
-    "Fen Bilimleri":     {"soru_sayisi": 20, "katsayi": 3.4},
+    "Tarih":             {"soru_sayisi": 5, "katsayi": 3.4},
+    "Coğrafya":          {"soru_sayisi": 5, "katsayi": 3.4},
+    "Felsefe":           {"soru_sayisi": 5, "katsayi": 3.4},
+    "Din Kültürü":       {"soru_sayisi": 5, "katsayi": 3.4},
+    "Fizik":             {"soru_sayisi": 7, "katsayi": 3.4},
+    "Kimya":             {"soru_sayisi": 7, "katsayi": 3.4},
+    "Biyoloji":          {"soru_sayisi": 6, "katsayi": 3.4},
 }
 TYT_BASLANGIC = 100.0
 TYT_MAKSIMUM = 500.0
@@ -187,11 +192,11 @@ def yerlestirme_puani_hesapla(
 ) -> float:
     """
     YKS yerleştirme puanı.
-    Formül: TYT × 0.40 + AYT × 0.60 + OBP × 0.12
-    OBP: Ortaöğretim Başarı Puanı (diploma notu × 5, max 500)
-    OBP katkısı max 60 puan.
+    Formül: TYT × 0.40 + AYT × 0.60 + OBP × 0.6
+    OBP: Ortaöğretim Başarı Puanı (diploma notu, max 100)
+    OBP katkısı max 60 puan (100 * 0.6).
     """
-    obp_katki = min(obp * 0.12, 60.0)
+    obp_katki = min(obp * 0.6, 60.0)
     return tyt_puani * 0.40 + ayt_puani * 0.60 + obp_katki
 
 
@@ -279,7 +284,7 @@ def tam_puan_hesapla(
         detay={
             "TYT Puanı": round(tyt, 2),
             "AYT Puanı": round(ayt, 2),
-            "OBP Katkısı": round(min(obp * 0.12, 60.0), 2),
+            "OBP Katkısı": round(min(obp * 0.6, 60.0), 2),
             "Yerleştirme Puanı": round(yerlestirme, 2),
         },
     )
