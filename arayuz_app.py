@@ -39,6 +39,7 @@ from models.konu_verileri import (
     konu_listesi_getir, tum_dersler,
     TYT_KONULARI, AYT_KONULARI, LGS_KONULARI,
 )
+from models.test_verileri import tum_testleri_getir
 
 
 # ══════════════════════════════════════════════
@@ -387,6 +388,37 @@ with st.sidebar:
 
     st.markdown("---")
 
+    st.markdown("---")
+    
+    # ── Öğrenci Düzenle / Sil ──
+    if st.session_state.get("secili_ogrenci_id"):
+        secili_ogr = repo.getir_id_ile(st.session_state["secili_ogrenci_id"])
+        if secili_ogr:
+            with st.expander("✏️ Öğrenci Düzenle"):
+                d_ad = st.text_input("Ad Soyad", secili_ogr.ad, key="d_ad")
+                d_bolum = st.text_input("Hedef Bölüm", secili_ogr.hedef_bolum, key="d_bolum")
+                d_tel = st.text_input("Telefon", secili_ogr.telefon, key="d_tel")
+                d_veli = st.text_input("Veli Adı", secili_ogr.veli_adi, key="d_veli")
+                d_okul = st.text_input("Okul", secili_ogr.okul, key="d_okul")
+                
+                if st.button("💾 Güncelle", use_container_width=True):
+                    secili_ogr.ad = d_ad
+                    secili_ogr.hedef_bolum = d_bolum
+                    secili_ogr.telefon = d_tel
+                    secili_ogr.veli_adi = d_veli
+                    secili_ogr.okul = d_okul
+                    repo.kaydet(secili_ogr)
+                    st.success("✅ Güncellendi!")
+                    st.rerun()
+
+            with st.expander("🗑️ Öğrenci Sil"):
+                st.warning("Bu işlem geri alınamaz!")
+                if st.button("❌ Öğrenciyi Sil", type="primary", use_container_width=True):
+                    repo.sil(secili_ogr.ogrenci_id)
+                    st.session_state["secili_ogrenci_id"] = None
+                    st.success("Öğrenci silindi.")
+                    st.rerun()
+
     with st.expander("➕ Yeni Öğrenci Ekle", expanded=not bool(isimler)):
         yeni_ad = st.text_input("Ad Soyad", key="yeni_ad")
         yeni_sinav = st.selectbox("Sınav Türü", ["YKS", "LGS"], key="yeni_sinav")
@@ -399,6 +431,11 @@ with st.sidebar:
         yeni_bolum = st.text_input("Hedef Bölüm", key="yeni_bolum")
         yeni_obp = st.number_input("OBP (Diploma Notu, 0-100)", 0.0, 100.0, 80.0, step=0.5, key="yeni_obp")
         yeni_hedef_sir = st.number_input("Hedef Sıralama", 1, 3_000_000, 50000, key="yeni_sir")
+        
+        # Ek Bilgiler
+        st.markdown("**İletişim & Okul**")
+        yeni_tel = st.text_input("Telefon", key="yeni_tel")
+        yeni_veli = st.text_input("Veli Adı", key="yeni_veli")
 
         if st.button("✨ Öğrenci Oluştur", use_container_width=True):
             if yeni_ad.strip():
@@ -409,6 +446,8 @@ with st.sidebar:
                     obp=yeni_obp,
                     hedef_puan_turu=yeni_puan_turu,
                     hedef_siralama=yeni_hedef_sir,
+                    telefon=yeni_tel,
+                    veli_adi=yeni_veli,
                 )
                 repo.kaydet(yeni)
                 st.session_state["secili_ogrenci_id"] = yeni.ogrenci_id
@@ -478,6 +517,7 @@ sekmeler = st.tabs([
     "📝 Deneme Ekle",
     "🔁 Tekrar Takibi",
     "📓 PDR Notları",
+    "🧠 PDR Testleri",
 ])
 
 
@@ -1094,3 +1134,100 @@ with sekmeler[6]:
                     st.write(not_k.icerik)
         else:
             st.info("📝 Henüz görüşme notu yok.")
+
+
+# ──────────────────────────────────────────────
+# SEKME 8: PDR TESTLERİ
+# ──────────────────────────────────────────────
+with sekmeler[7]:
+    st.subheader("🧠 PDR Envanter ve Testleri")
+    
+    testler = tum_testleri_getir()
+    secilen_test_id = st.selectbox(
+        "Uygulamak İstediğiniz Testi Seçin",
+        [t.id for t in testler],
+        format_func=lambda x: next((t.ad for t in testler if t.id == x), x)
+    )
+    
+    # Seçilen testi bul
+    secilen_test = next((t for t in testler if t.id == secilen_test_id), None)
+    
+    if secilen_test:
+        st.info(f"**{secilen_test.ad}**\n\n{secilen_test.aciklama}")
+        
+        # Test geçmişini göster
+        gecmis = ogr.test_sonuclari.get(secilen_test.id, [])
+        if gecmis:
+            with st.expander("📜 Geçmiş Sonuçlar"):
+                for g in gecmis[::-1]:
+                    detay_str = g.get('sonuc_detayi', '')
+                    st.write(f"📅 **{g['tarih']}** - Skor: {g['skor']} - {detay_str}")
+        
+        st.markdown("---")
+        st.markdown("### 📝 Sorular")
+        
+        # Form
+        with st.form(key=f"form_{secilen_test.id}"):
+            cevaplar = {}
+            for soru in secilen_test.sorular:
+                st.write(f"**{soru.id}.** {soru.metin}")
+                
+                if secilen_test.id == "holland_ilgi":
+                     # Holland: Evet / Hayır
+                     val = st.radio(f"Soru {soru.id}", ["Evet (1)", "Hayır (0)"], key=f"h_{secilen_test.id}_{soru.id}", horizontal=True, label_visibility="collapsed")
+                     puan = 1 if "Evet" in val else 0
+                     cevaplar[soru.id] = puan
+                else:
+                    # Standart 5'li Likert
+                    opts = ["Hiç Katılmıyorum (1)", "Az Katılıyorum (2)", "Kararsızım (3)", "Katılıyorum (4)", "Tamamen Katılıyorum (5)"]
+                    val = st.radio(f"Soru {soru.id}", opts, key=f"s_{secilen_test.id}_{soru.id}", horizontal=True, label_visibility="collapsed")
+                    try:
+                        puan = int(val.split("(")[1].replace(")", ""))
+                    except:
+                        puan = 3
+                    cevaplar[soru.id] = puan
+            
+            submit_btn = st.form_submit_button("✅ Testi Tamamla ve Kaydet")
+            
+            if submit_btn:
+                detay = ""
+                toplam_skor = 0
+                
+                if secilen_test.degerlendirme_tipi == "toplam_puan":
+                    toplam_skor = sum(cevaplar.values())
+                    if secilen_test.id == "sinav_kaygisi":
+                        if toplam_skor < 20: detay = "Düşük Kaygı - Gayet rahatsınız."
+                        elif toplam_skor < 35: detay = "Orta Kaygı - Kontrol edilebilir düzeyde."
+                        else: detay = "⚠️ Yüksek Kaygı - PDR uzmanı ile görüşmelisiniz."
+                    else:
+                        detay = f"Toplam Puan: {toplam_skor}"
+                
+                elif secilen_test.degerlendirme_tipi == "kategori_puani":
+                    # Holland Hesaplama
+                    skorlar = {}
+                    for soru in secilen_test.sorular:
+                        kat = soru.kategori
+                        p = cevaplar.get(soru.id, 0)
+                        if kat:
+                            skorlar[kat] = skorlar.get(kat, 0) + p
+                    
+                    # En yüksek 3
+                    sirali = sorted(skorlar.items(), key=lambda x: x[1], reverse=True)
+                    kod = "".join([k for k, v in sirali[:3] if v > 0])
+                    detay = f"Holland Kodunuz: **{kod}** (Döküm: {dict(sirali)})"
+                    toplam_skor = sum(skorlar.values())
+
+                # Kaydet
+                yeni_sonuc = {
+                    "tarih": str(datetime.now().date()),
+                    "skor": toplam_skor,
+                    "sonuc_detayi": detay,
+                    "cevaplar": cevaplar
+                }
+                ogr.test_sonucu_ekle(secilen_test.id, yeni_sonuc)
+                repo.kaydet(ogr)
+                st.success(f"✅ Test tamamlandı!")
+                st.info(detay)
+                # Geçmişi güncellemek için rerun
+                # st.rerun() # Form içinde rerun sorun olabilir
+

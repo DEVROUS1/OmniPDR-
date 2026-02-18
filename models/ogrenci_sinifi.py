@@ -200,22 +200,39 @@ class Ogrenci:
         obp: float = 0.0,
         hedef_puan_turu: str = "SAY",
         hedef_siralama: Optional[int] = None,
+        # Yeni Kişisel Bilgiler
+        telefon: str = "",
+        email: str = "",
+        veli_adi: str = "",
+        veli_tel: str = "",
+        okul: str = "",
+        sinif: str = "",
     ):
         self.ogrenci_id: str = ogrenci_id or str(uuid.uuid4())[:12]
         self.ad: str = ad
         self.hedef_bolum: str = hedef_bolum
         self.sinav_turu: str = sinav_turu
         self.hedef_net: Optional[float] = hedef_net
-        self.obp: float = obp  # Ortaöğretim Başarı Puanı (diploma notu × 5)
-        self.hedef_puan_turu: str = hedef_puan_turu  # SAY, EA, SOZ
+        self.obp: float = obp
+        self.hedef_puan_turu: str = hedef_puan_turu
         self.hedef_siralama: Optional[int] = hedef_siralama
+        
+        # Kişisel detaylar
+        self.telefon = telefon
+        self.email = email
+        self.veli_adi = veli_adi
+        self.veli_tel = veli_tel
+        self.okul = okul
+        self.sinif = sinif
+        
         self.kayit_tarihi: date = date.today()
 
         # Alt koleksiyonlar
         self.deneme_kayitlari: List[DenemeKaydi] = []
         self.hata_kayitlari: List[HataKaydi] = []
         self.gorusme_notlari: List[GorusmeNotu] = []
-        self.konu_ilerlemeleri: dict = {}  # {"ders": {"konu": ilerleme_yüzdesi}}
+        self.konu_ilerlemeleri: dict = {}
+        self.test_sonuclari: dict = {} # {test_id: {tarih, skor, sonuc_detayi}}
 
     # ── Veri ekleme yardımcıları ──────────────────
 
@@ -242,6 +259,18 @@ class Ogrenci:
         )
         self.gorusme_notlari.append(not_)
         return not_
+
+    def konu_ilerlemesi_guncelle(self, ders: str, konu: str, ilerleme: float):
+        """Konu ilerleme yüzdesini günceller."""
+        if ders not in self.konu_ilerlemeleri:
+            self.konu_ilerlemeleri[ders] = {}
+        self.konu_ilerlemeleri[ders][konu] = ilerleme
+        
+    def test_sonucu_ekle(self, test_id: str, sonuc_verisi: dict):
+        """PDR test sonucunu kaydeder."""
+        if test_id not in self.test_sonuclari:
+            self.test_sonuclari[test_id] = []
+        self.test_sonuclari[test_id].append(sonuc_verisi)
 
     # ── Hesaplama özellikleri ──────────────────
 
@@ -275,11 +304,20 @@ class Ogrenci:
             "obp": self.obp,
             "hedef_puan_turu": self.hedef_puan_turu,
             "hedef_siralama": self.hedef_siralama,
+            # Yeni alanlar
+            "telefon": self.telefon,
+            "email": self.email,
+            "veli_adi": self.veli_adi,
+            "veli_tel": self.veli_tel,
+            "okul": self.okul,
+            "sinif": self.sinif,
+            
             "kayit_tarihi": self.kayit_tarihi.isoformat(),
             "deneme_kayitlari": [d.to_dict() for d in self.deneme_kayitlari],
             "hata_kayitlari": [h.to_dict() for h in self.hata_kayitlari],
             "gorusme_notlari": [g.to_dict() for g in self.gorusme_notlari],
             "konu_ilerlemeleri": self.konu_ilerlemeleri,
+            "test_sonuclari": self.test_sonuclari,
         }
 
     @classmethod
@@ -293,12 +331,20 @@ class Ogrenci:
             obp=d.get("obp", 0.0),
             hedef_puan_turu=d.get("hedef_puan_turu", "SAY"),
             hedef_siralama=d.get("hedef_siralama"),
+            # Yeni alanlar (geriye dönük uyumluluk için .get)
+            telefon=d.get("telefon", ""),
+            email=d.get("email", ""),
+            veli_adi=d.get("veli_adi", ""),
+            veli_tel=d.get("veli_tel", ""),
+            okul=d.get("okul", ""),
+            sinif=d.get("sinif", ""),
         )
         ogr.kayit_tarihi = date.fromisoformat(d.get("kayit_tarihi", date.today().isoformat()))
         ogr.deneme_kayitlari = [DenemeKaydi.from_dict(x) for x in d.get("deneme_kayitlari", [])]
         ogr.hata_kayitlari = [HataKaydi.from_dict(x) for x in d.get("hata_kayitlari", [])]
         ogr.gorusme_notlari = [GorusmeNotu.from_dict(x) for x in d.get("gorusme_notlari", [])]
         ogr.konu_ilerlemeleri = d.get("konu_ilerlemeleri", {})
+        ogr.test_sonuclari = d.get("test_sonuclari", {})
         return ogr
 
     def __repr__(self) -> str:
