@@ -197,18 +197,25 @@ class Ogrenci:
         sinav_turu: str = "YKS",   # "YKS" veya "LGS"
         hedef_net: Optional[float] = None,
         ogrenci_id: Optional[str] = None,
+        obp: float = 0.0,
+        hedef_puan_turu: str = "SAY",
+        hedef_siralama: Optional[int] = None,
     ):
         self.ogrenci_id: str = ogrenci_id or str(uuid.uuid4())[:12]
         self.ad: str = ad
         self.hedef_bolum: str = hedef_bolum
         self.sinav_turu: str = sinav_turu
         self.hedef_net: Optional[float] = hedef_net
+        self.obp: float = obp  # Ortaöğretim Başarı Puanı (diploma notu × 5)
+        self.hedef_puan_turu: str = hedef_puan_turu  # SAY, EA, SOZ
+        self.hedef_siralama: Optional[int] = hedef_siralama
         self.kayit_tarihi: date = date.today()
 
         # Alt koleksiyonlar
         self.deneme_kayitlari: List[DenemeKaydi] = []
         self.hata_kayitlari: List[HataKaydi] = []
         self.gorusme_notlari: List[GorusmeNotu] = []
+        self.konu_ilerlemeleri: dict = {}  # {"ders": {"konu": ilerleme_yüzdesi}}
 
     # ── Veri ekleme yardımcıları ──────────────────
 
@@ -265,10 +272,14 @@ class Ogrenci:
             "hedef_bolum": self.hedef_bolum,
             "sinav_turu": self.sinav_turu,
             "hedef_net": self.hedef_net,
+            "obp": self.obp,
+            "hedef_puan_turu": self.hedef_puan_turu,
+            "hedef_siralama": self.hedef_siralama,
             "kayit_tarihi": self.kayit_tarihi.isoformat(),
             "deneme_kayitlari": [d.to_dict() for d in self.deneme_kayitlari],
             "hata_kayitlari": [h.to_dict() for h in self.hata_kayitlari],
             "gorusme_notlari": [g.to_dict() for g in self.gorusme_notlari],
+            "konu_ilerlemeleri": self.konu_ilerlemeleri,
         }
 
     @classmethod
@@ -279,11 +290,15 @@ class Ogrenci:
             sinav_turu=d.get("sinav_turu", "YKS"),
             hedef_net=d.get("hedef_net"),
             ogrenci_id=d.get("ogrenci_id"),
+            obp=d.get("obp", 0.0),
+            hedef_puan_turu=d.get("hedef_puan_turu", "SAY"),
+            hedef_siralama=d.get("hedef_siralama"),
         )
         ogr.kayit_tarihi = date.fromisoformat(d.get("kayit_tarihi", date.today().isoformat()))
         ogr.deneme_kayitlari = [DenemeKaydi.from_dict(x) for x in d.get("deneme_kayitlari", [])]
         ogr.hata_kayitlari = [HataKaydi.from_dict(x) for x in d.get("hata_kayitlari", [])]
         ogr.gorusme_notlari = [GorusmeNotu.from_dict(x) for x in d.get("gorusme_notlari", [])]
+        ogr.konu_ilerlemeleri = d.get("konu_ilerlemeleri", {})
         return ogr
 
     def __repr__(self) -> str:
