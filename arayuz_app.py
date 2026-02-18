@@ -20,7 +20,7 @@ import math
 # Yerel modüller
 from models.ogrenci_sinifi import Ogrenci, DenemeKaydi, HataKaydi, GorusmeNotu
 from core.veritabani import OgrenciRepository
-from core.analiz_motoru import AnalizMotoru
+from core.analiz_motoru import AnalizMotoru, UyariSeviyesi
 from core.puan_hesaplama import (
     TYT_DERSLER, AYT_DERSLER, LGS_DERSLER,
     AYT_PUAN_KATSAYILARI,
@@ -574,7 +574,8 @@ with sekmeler[0]:
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         # Detaylı analiz
-        rapor = analiz.genel_rapor()
+        # Detaylı analiz
+        rapor = analiz.tam_analiz()
         if rapor:
             st.markdown("<br>", unsafe_allow_html=True)
             col_a1, col_a2, col_a3 = st.columns(3)
@@ -588,17 +589,20 @@ with sekmeler[0]:
                     st.warning(f"📉 {d}")
             with col_a3:
                 st.markdown("#### 🔥 Durum")
-                yanma = analiz.zimmerman_oz_duzenleme()
-                if yanma:
-                    if yanma.get("risk_seviyesi") == "Yüksek":
-                        st.error(f"🚨 Tükenmişlik Riski: {yanma.get('risk_seviyesi')}")
-                    elif yanma.get("risk_seviyesi") == "Orta":
-                        st.warning(f"⚡ Tükenmişlik Riski: {yanma.get('risk_seviyesi')}")
-                    else:
-                        st.info(f"✨ Tükenmişlik Riski: {yanma.get('risk_seviyesi', 'Düşük')}")
-                zpd = analiz.vygotsky_zpd()
-                if zpd:
-                    st.info(f"📐 ZPD Bölgesi: {zpd.get('bolge', '?')}")
+                yanma = rapor.burnout
+                if yanma.seviye == UyariSeviyesi.KRITIK:
+                    st.error(f"🚨 {yanma.mesaj}")
+                elif yanma.seviye == UyariSeviyesi.UYARI:
+                    st.warning(f"⚡ {yanma.mesaj}")
+                elif yanma.seviye == UyariSeviyesi.DIKKAT:
+                    st.info(f"💡 {yanma.mesaj}")
+                else:
+                    st.success(f"✨ {yanma.mesaj}")
+
+                zpd = rapor.zpd
+                if zpd and zpd.durum:
+                    st.info(f"📐 ZPD: {zpd.durum}\n\n{zpd.aciklama}")
+
 
     else:
         st.info("📝 Henüz deneme kaydı yok. **Deneme Ekle** sekmesinden ilk denemenizi girin!")
