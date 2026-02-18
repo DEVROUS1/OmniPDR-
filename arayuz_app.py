@@ -39,7 +39,9 @@ from models.konu_verileri import (
     konu_listesi_getir, tum_dersler,
     TYT_KONULARI, AYT_KONULARI, LGS_KONULARI,
 )
+from models.konu_istatistikleri import istatistik_getir, YILLAR
 from models.test_verileri import tum_testleri_getir
+from models.soru_dagilimi import TYT_DAGILIM, AYT_DAGILIM, YILLAR
 
 
 # ══════════════════════════════════════════════
@@ -891,12 +893,13 @@ with sekmeler[2]:
 with sekmeler[3]:
     st.subheader("📚 Konu Bazlı İlerleme Takibi")
 
+    aktif_sinav_turu = "LGS"
     if ogr.sinav_turu == "LGS":
-        konular_dict = LGS_DERSLER # LGS_DERSLER yerine LGS_KONULARI olmalıydı, düzeltildi.
         dersler = list(LGS_KONULARI.keys())
     else:
         konu_tab = st.radio("Sınav Bölümü", ["TYT", "AYT"], horizontal=True, key="konu_sinav")
         dersler = list(TYT_KONULARI.keys()) if konu_tab == "TYT" else list(AYT_KONULARI.keys())
+        aktif_sinav_turu = konu_tab
 
     if dersler:
         secilen_ders = st.selectbox("Ders Seçin", dersler, key="konu_ders_secim")
@@ -907,11 +910,15 @@ with sekmeler[3]:
     if not dersler or not secilen_ders:
         st.info("🤷‍♂️ Bu sınav türü için konu listesi bulunamadı.")
     else:
+                df_dagilim = pd.DataFrame.from_dict(dagilim_veri, orient='index', columns=YILLAR)
+                st.dataframe(df_dagilim, use_container_width=True)
+                st.caption("ℹ️ Veriler 2019-2023 yıllarını kapsamaktadır. Bazı yıllarda (ör. 2020, 2023) müfredat değişiklikleri nedeniyle soru çıkmayan konular olabilir.")
+
         st.markdown(f"**{secilen_ders}** konuları:")
         
         # Konuları 2 kolonda göster
         col_k1, col_k2 = st.columns(2)
-        konular = konu_listesi_getir(ogr.sinav_turu, secilen_ders)
+        konular = konu_listesi_getir(alt_sinav, secilen_ders)
         
         # İlerleme durum seçenekleri
         DURUMLAR = {
