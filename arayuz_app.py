@@ -416,7 +416,7 @@ with st.sidebar:
                 st.rerun()
 
     st.markdown("---")
-    st.caption("v2.0 • Ultra-Profesyonel")
+    st.caption("v2.2.1 • Ultra-Profesyonel (Hotfix)")
 
 
 # ══════════════════════════════════════════════
@@ -615,6 +615,7 @@ with sekmeler[1]:
     st.subheader("🎯 Net → Puan Dönüşümü & Sıralama Tahmini")
 
     if ogr.sinav_turu == "YKS":
+        tyt_netleri = {}
         tab_tyt, tab_ayt, tab_sonuc = st.tabs(["TYT Netleri", "AYT Netleri", "📊 Sonuç"])
 
         with tab_tyt:
