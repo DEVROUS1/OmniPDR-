@@ -297,7 +297,7 @@ _state("aktif_sekme", 0)
 def secili_ogrenci():
     oid = st.session_state.get("secili_ogrenci_id")
     if oid:
-        return repo.bul(oid)
+        return repo.getir_id_ile(oid)
     return None
 
 
@@ -375,7 +375,7 @@ with st.sidebar:
     st.markdown("---")
 
     # Öğrenci seçimi veya ekleme
-    ogrenciler = repo.tum_ogrenciler()
+    ogrenciler = repo.hepsini_getir()
     isimler = [o.ad for o in ogrenciler]
 
     if isimler:
@@ -410,7 +410,7 @@ with st.sidebar:
                     hedef_puan_turu=yeni_puan_turu,
                     hedef_siralama=yeni_hedef_sir,
                 )
-                repo.ekle(yeni)
+                repo.kaydet(yeni)
                 st.session_state["secili_ogrenci_id"] = yeni.ogrenci_id
                 st.success(f"✅ {yeni_ad} eklendi!")
                 st.rerun()
@@ -493,14 +493,14 @@ with sekmeler[0]:
     deneme_sayisi = len(ogr.deneme_kayitlari)
     if deneme_sayisi > 0:
         son_deneme = ogr.deneme_kayitlari[-1]
-        son_toplam_net = sum(son_deneme.ders_netleri.values())
+        son_toplam_net = sum(son_deneme.netleri.values())
         ortalama_net = sum(
-            sum(d.ders_netleri.values()) for d in ogr.deneme_kayitlari
+            sum(d.netleri.values()) for d in ogr.deneme_kayitlari
         ) / deneme_sayisi
 
         # Trend hesapla
         if deneme_sayisi >= 2:
-            onceki_net = sum(ogr.deneme_kayitlari[-2].ders_netleri.values())
+            onceki_net = sum(ogr.deneme_kayitlari[-2].netleri.values())
             trend = son_toplam_net - onceki_net
             trend_str = f"{'↑' if trend > 0 else '↓'} {abs(trend):.1f}"
         else:
@@ -527,7 +527,7 @@ with sekmeler[0]:
             st.subheader("📈 Net Gelişim Grafiği")
             df_data = []
             for d in ogr.deneme_kayitlari:
-                for ders, net in d.ders_netleri.items():
+                for ders, net in d.netleri.items():
                     df_data.append({
                         "Tarih": d.tarih.isoformat(),
                         "Ders": ders,
@@ -553,9 +553,9 @@ with sekmeler[0]:
 
         with col_g2:
             st.subheader("📊 Son Deneme Dağılımı")
-            if son_deneme.ders_netleri:
+            if son_deneme.netleri:
                 df_pie = pd.DataFrame([
-                    {"Ders": k, "Net": v} for k, v in son_deneme.ders_netleri.items()
+                    {"Ders": k, "Net": v} for k, v in son_deneme.netleri.items()
                 ])
                 fig_pie = px.bar(
                     df_pie, x="Net", y="Ders", orientation="h",
@@ -831,7 +831,7 @@ with sekmeler[3]:
                     if ders_key not in ogr.konu_ilerlemeleri:
                         ogr.konu_ilerlemeleri[ders_key] = {}
                     ogr.konu_ilerlemeleri[ders_key][konu] = yeni
-                    repo.guncelle(ogr)
+                    repo.kaydet(ogr)
 
                 if yeni >= 80:
                     tamamlanan += 1
@@ -854,7 +854,6 @@ with sekmeler[4]:
     st.subheader("📝 Yeni Deneme Sınavı Kaydı")
 
     deneme_tarih = st.date_input("Tarih", date.today(), key="deneme_tarih")
-    deneme_ad = st.text_input("Deneme Adı (opsiyonel)", placeholder="Örn: TYT-5 Genel", key="deneme_ad")
 
     st.markdown("#### Ders Netleri")
 
@@ -881,17 +880,30 @@ with sekmeler[4]:
                 step=0.5, key=f"dn_{ders}"
             )
 
+    st.markdown("#### Haftalık Veriler")
+    col_hv1, col_hv2, col_hv3 = st.columns(3)
+    with col_hv1:
+        calisma_s = st.number_input("Çalışma Saati (haftalık)", 0.0, 100.0, 20.0, key="cal_s")
+    with col_hv2:
+        stres_p = st.slider("Stres Puanı (1-10)", 1, 10, 5, key="stres_p")
+    with col_hv3:
+        uyku_s = st.number_input("Uyku Saati (günlük ort.)", 0.0, 16.0, 7.0, key="uyku_s")
+
+    deneme_not = st.text_input("Not (opsiyonel)", placeholder="Örn: TYT-5 Genel", key="deneme_not")
+
     if st.button("💾 Deneme Kaydet", use_container_width=True, key="btn_deneme_kaydet"):
-        # Sıfır olmayan dersleri filtrele
         netleri_filtre = {d: n for d, n in ders_netleri.items() if n > 0}
         if netleri_filtre:
             kayit = DenemeKaydi(
                 tarih=deneme_tarih,
-                ders_netleri=netleri_filtre,
-                deneme_adi=deneme_ad or None,
+                netleri=netleri_filtre,
+                calisma_saati=calisma_s,
+                stres_puani=stres_p,
+                uyku_saati=uyku_s,
+                notlar=deneme_not or "",
             )
             ogr.deneme_ekle(kayit)
-            repo.guncelle(ogr)
+            repo.kaydet(ogr)
             st.success(f"✅ Deneme kaydedildi! Toplam net: {sum(netleri_filtre.values()):.1f}")
             st.rerun()
         else:
@@ -903,12 +915,12 @@ with sekmeler[4]:
         st.markdown("#### 📋 Geçmiş Denemeler")
         gecmis_data = []
         for d in reversed(ogr.deneme_kayitlari):
-            toplam = sum(d.ders_netleri.values())
+            toplam = sum(d.netleri.values())
             gecmis_data.append({
                 "Tarih": d.tarih.isoformat(),
-                "Ad": d.deneme_adi or "—",
+                "Not": d.notlar or "—",
                 "Toplam Net": f"{toplam:.1f}",
-                **{k: f"{v:.1f}" for k, v in d.ders_netleri.items()},
+                **{k: f"{v:.1f}" for k, v in d.netleri.items()},
             })
         st.dataframe(pd.DataFrame(gecmis_data), use_container_width=True, hide_index=True)
 
@@ -924,17 +936,11 @@ with sekmeler[5]:
         st.markdown("#### ➕ Yeni Hata Kaydı")
         hata_ders = st.text_input("Ders", key="hata_ders")
         hata_konu = st.text_input("Konu / Soru", key="hata_konu")
-        hata_aciklama = st.text_area("Açıklama", key="hata_aciklama", height=100)
 
         if st.button("📌 Hata Kaydet", use_container_width=True, key="btn_hata"):
             if hata_ders and hata_konu:
-                kayit = HataKaydi(
-                    ders=hata_ders,
-                    konu=hata_konu,
-                    aciklama=hata_aciklama or "",
-                )
-                ogr.hata_kaydi_ekle(kayit)
-                repo.guncelle(ogr)
+                ogr.hata_ekle(ders=hata_ders, konu=hata_konu)
+                repo.kaydet(ogr)
                 st.success("✅ Hata kaydedildi! Tekrar takvimi oluşturuldu.")
                 st.rerun()
 
@@ -944,14 +950,19 @@ with sekmeler[5]:
             bugun = date.today()
             yaklasan = []
             for h in ogr.hata_kayitlari:
-                sonraki = h.sonraki_tekrar_tarihi()
+                # Sonraki tamamlanmamış tekrar tarihini bul
+                sonraki = None
+                for t in h.tekrar_tarihleri:
+                    if t not in h.tamamlanan_tekrarlar:
+                        sonraki = t
+                        break
                 if sonraki:
                     gun_fark = (sonraki - bugun).days
                     durum = "🔴 Gecikmiş" if gun_fark < 0 else "🟡 Bugün" if gun_fark == 0 else f"🟢 {gun_fark} gün"
                     yaklasan.append({
                         "Ders": h.ders,
                         "Konu": h.konu,
-                        "Tekrar": h.tekrar_sayisi,
+                        "Yapılan": f"{len(h.tamamlanan_tekrarlar)}/5",
                         "Sonraki": sonraki.isoformat(),
                         "Durum": durum,
                     })
@@ -963,12 +974,11 @@ with sekmeler[5]:
                 # Tekrar yapma butonu
                 st.markdown("---")
                 for h in ogr.hata_kayitlari:
-                    sonraki = h.sonraki_tekrar_tarihi()
-                    if sonraki and sonraki <= bugun:
-                        if st.button(f"✅ '{h.konu}' tekrarını yaptım", key=f"tekrar_{h.konu}_{h.ders}"):
-                            h.tekrar_yap()
-                            repo.guncelle(ogr)
-                            st.success(f"Tekrar #{h.tekrar_sayisi} kaydedildi!")
+                    if h.bekleyen_tekrar_sayisi > 0:
+                        if st.button(f"✅ '{h.konu}' tekrarını yaptım", key=f"tekrar_{h.id}"):
+                            h.tekrar_tamamla()
+                            repo.kaydet(ogr)
+                            st.success(f"Tekrar kaydedildi! ({len(h.tamamlanan_tekrarlar)}/5)")
                             st.rerun()
             else:
                 st.info("🎉 Yaklaşan tekrar yok. Tüm tekrarlar tamamlandı!")
@@ -985,28 +995,19 @@ with sekmeler[6]:
     col_n1, col_n2 = st.columns([1, 2])
     with col_n1:
         st.markdown("#### ➕ Yeni Görüşme Notu")
-        not_tarih = st.date_input("Tarih", date.today(), key="not_tarih")
-        not_tur = st.selectbox("Tür", [
-            "Bireysel Görüşme", "Veli Görüşmesi", "Kriz Müdahalesi",
-            "Yönlendirme", "Takip Notu", "Diğer"
-        ], key="not_tur")
         not_icerik = st.text_area("İçerik", key="not_icerik", height=200,
                                    placeholder="Görüşme notlarını buraya yazın...")
-        not_etiketler = st.text_input("Etiketler (virgülle ayırın)",
-                                       key="not_etiketler",
-                                       placeholder="motivasyon, sınav kaygısı")
+        not_degerlendirme = st.text_input("Değerlendirme (opsiyonel)",
+                                           key="not_deger",
+                                           placeholder="Kısa danışman yorumu...")
 
         if st.button("💾 Notu Kaydet", use_container_width=True, key="btn_not"):
             if not_icerik.strip():
-                etiket_list = [e.strip() for e in not_etiketler.split(",") if e.strip()]
-                not_kaydi = GorusmeNotu(
-                    tarih=not_tarih,
-                    tur=not_tur,
+                ogr.gorusme_ekle(
                     icerik=not_icerik.strip(),
-                    etiketler=etiket_list,
+                    degerlendirme=not_degerlendirme.strip() or None,
                 )
-                ogr.gorusme_notu_ekle(not_kaydi)
-                repo.guncelle(ogr)
+                repo.kaydet(ogr)
                 st.success("✅ Not kaydedildi!")
                 st.rerun()
 
@@ -1014,13 +1015,10 @@ with sekmeler[6]:
         st.markdown("#### 📋 Geçmiş Notlar")
         if ogr.gorusme_notlari:
             for not_k in reversed(ogr.gorusme_notlari):
-                with st.expander(f"📄 {not_k.tarih.isoformat()} – {not_k.tur}"):
+                baslik = f"📄 {not_k.tarih.isoformat()}"
+                if not_k.degerlendirme:
+                    baslik += f" – {not_k.degerlendirme}"
+                with st.expander(baslik):
                     st.write(not_k.icerik)
-                    if not_k.etiketler:
-                        etiketler_html = " ".join(
-                            f'<span style="background:rgba(108,99,255,0.2);color:#6C63FF;padding:2px 8px;border-radius:10px;font-size:0.8rem;margin:2px;">{e}</span>'
-                            for e in not_k.etiketler
-                        )
-                        st.markdown(etiketler_html, unsafe_allow_html=True)
         else:
             st.info("📝 Henüz görüşme notu yok.")
