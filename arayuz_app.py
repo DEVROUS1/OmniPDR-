@@ -621,6 +621,7 @@ with sekmeler[1]:
             st.markdown("**TYT – Temel Yeterlilik Testi** (120 soru)")
             
             # Gruplandırılmış TYT Girişi
+            tyt_netleri = {}
             c_tyt1, c_tyt2, c_tyt3 = st.columns([1, 1, 1])
             
             with c_tyt1:
@@ -735,14 +736,29 @@ with sekmeler[2]:
     else:
         col_f1, col_f2, col_f3 = st.columns(3)
         with col_f1:
-            filtre_puan = st.number_input("Tahmini Puanınız", 100.0, 500.0, 350.0, key="filtre_puan")
+            oneri_modu = st.radio("Öneri Bazı", ["Mevcut Puan", "Hedef Sıralama"], horizontal=True, key="oneri_mod")
         with col_f2:
             filtre_pt = st.selectbox("Puan Türü", ["SAY", "EA", "SOZ"], key="filtre_pt",
                                       index=["SAY", "EA", "SOZ"].index(ogr.hedef_puan_turu) if ogr.hedef_puan_turu in ["SAY", "EA", "SOZ"] else 0)
         with col_f3:
             filtre_sehir = st.selectbox("Şehir (Opsiyonel)", ["Tümü"] + benzersiz_sehirler(), key="filtre_sehir")
 
-        oneriler = universite_oner(filtre_puan, filtre_pt)
+        oneriler = {}
+        if oneri_modu == "Mevcut Puan":
+           puan_giris = st.number_input("Tahmini Puanınız", 100.0, 600.0, 350.0, key="filtre_puan")
+           oneriler = universite_oner(puan_giris, filtre_pt)
+        else:
+           # Hedef sıralama bazlı
+           hedef = ogr.hedef_siralama or 50000
+           hedef_giris = st.number_input("Hedef Sıralama", 1, 3_000_000, hedef, key="filtre_sir")
+           
+           # Sıralama mantığı: Hedefin %20 altı ve %20 üstü
+           tum = bolum_ara(puan_turu=filtre_pt, sehir=filtre_sehir if filtre_sehir != "Tümü" else None)
+           oneriler = {
+               "guvenli": [b for b in tum if b.siralama >= hedef_giris * 1.2][:8], # Daha kötü sıralama = güvenli
+               "dengeli": [b for b in tum if hedef_giris * 0.8 <= b.siralama <= hedef_giris * 1.2][:8],
+               "sans": [b for b in tum if b.siralama < hedef_giris * 0.8][:8], # Daha iyi sıralama = şans
+           }
 
         # Güvenli
         st.markdown("### 🟢 Güvenli Tercihler")
