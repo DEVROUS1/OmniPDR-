@@ -41,7 +41,7 @@ from models.konu_verileri import (
 )
 from models.konu_istatistikleri import istatistik_getir, YILLAR
 from models.test_verileri import tum_testleri_getir
-from models.soru_dagilimi import TYT_DAGILIM, AYT_DAGILIM, YILLAR
+
 
 
 # ══════════════════════════════════════════════
@@ -893,13 +893,13 @@ with sekmeler[2]:
 with sekmeler[3]:
     st.subheader("📚 Konu Bazlı İlerleme Takibi")
 
-    aktif_sinav_turu = "LGS"
     if ogr.sinav_turu == "LGS":
+        alt_sinav = "LGS"
         dersler = list(LGS_KONULARI.keys())
     else:
         konu_tab = st.radio("Sınav Bölümü", ["TYT", "AYT"], horizontal=True, key="konu_sinav")
+        alt_sinav = konu_tab
         dersler = list(TYT_KONULARI.keys()) if konu_tab == "TYT" else list(AYT_KONULARI.keys())
-        aktif_sinav_turu = konu_tab
 
     if dersler:
         secilen_ders = st.selectbox("Ders Seçin", dersler, key="konu_ders_secim")
@@ -910,15 +910,24 @@ with sekmeler[3]:
     if not dersler or not secilen_ders:
         st.info("🤷‍♂️ Bu sınav türü için konu listesi bulunamadı.")
     else:
+        # Soru Dağılımı Tablosu
+        dagilim_veri = None
+        if alt_sinav == "TYT":
+            dagilim_veri = TYT_DAGILIM.get(secilen_ders)
+        elif alt_sinav == "AYT":
+            dagilim_veri = AYT_DAGILIM.get(secilen_ders)
+            
+        if dagilim_veri:
+            with st.expander(f"📊 {secilen_ders} - Son 5 Yıl Soru Dağılımı"):
                 df_dagilim = pd.DataFrame.from_dict(dagilim_veri, orient='index', columns=YILLAR)
                 st.dataframe(df_dagilim, use_container_width=True)
-                st.caption("ℹ️ Veriler 2019-2023 yıllarını kapsamaktadır. Bazı yıllarda (ör. 2020, 2023) müfredat değişiklikleri nedeniyle soru çıkmayan konular olabilir.")
+                st.caption("ℹ️ Veriler 2019-2023 yıllarını kapsamaktadır. Bazı yıllarda müfredat değişikliği olabilir.")
 
         st.markdown(f"**{secilen_ders}** konuları:")
         
-        # Konuları 2 kolonda göster
         col_k1, col_k2 = st.columns(2)
         konular = konu_listesi_getir(alt_sinav, secilen_ders)
+        
         
         # İlerleme durum seçenekleri
         DURUMLAR = {
@@ -928,9 +937,12 @@ with sekmeler[3]:
             "🔁 Tekrar Edildi": 100.0
         }
         DURUM_LISTE = list(DURUMLAR.keys())
-
+        
+        tamamlanan = 0
         for i, konu in enumerate(konular):
             mevcut_ilerleme = ogr.konu_ilerlemeleri.get(secilen_ders, {}).get(konu, 0.0)
+            if mevcut_ilerleme >= 100:
+                tamamlanan += 1
             
             # Mevcut float değerden duruma (en yakın)
             secili_index = 0
@@ -956,14 +968,14 @@ with sekmeler[3]:
                     repo.kaydet(ogr)
 
                 # Renkli progress bar
-                renk = "#00E676" if yeni >= 80 else "#FFD600" if yeni >= 40 else "#FF5252"
+                renk = "#00E676" if yeni_deger >= 80 else "#FFD600" if yeni_deger >= 40 else "#FF5252"
                 st.markdown(f"""
                 <div class="konu-progress-bar">
-                    <div class="konu-progress-fill" style="width:{yeni}%; background:{renk};"></div>
+                    <div class="konu-progress-fill" style="width:{yeni_deger}%; background:{renk};"></div>
                 </div>""", unsafe_allow_html=True)
-
-            yuzde = (tamamlanan / len(konular) * 100) if konular else 0
-            st.caption(f"✅ {tamamlanan}/{len(konular)} konu tamamlandı (%{yuzde:.0f})")
+                
+        yuzde = (tamamlanan / len(konular) * 100) if konular else 0
+        st.caption(f"✅ {tamamlanan}/{len(konular)} konu tamamlandı (%{yuzde:.0f})")
 
 
 # ──────────────────────────────────────────────
