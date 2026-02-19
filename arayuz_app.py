@@ -39,7 +39,7 @@ from models.konu_verileri import (
     konu_listesi_getir, tum_dersler,
     TYT_KONULARI, AYT_KONULARI, LGS_KONULARI,
 )
-from models.konu_istatistikleri import istatistik_getir, YILLAR
+from models.soru_dagilimi import TYT_DAGILIM, AYT_DAGILIM, YILLAR
 from models.test_verileri import tum_testleri_getir
 
 
