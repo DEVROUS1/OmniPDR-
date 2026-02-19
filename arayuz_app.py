@@ -918,10 +918,10 @@ with sekmeler[3]:
             dagilim_veri = AYT_DAGILIM.get(secilen_ders)
             
         if dagilim_veri:
-            with st.expander(f"📊 {secilen_ders} - Son 5 Yıl Soru Dağılımı"):
+            with st.expander(f"📊 {secilen_ders} - Son 5 Yıl Soru Dağılımı (2021-2025)"):
                 df_dagilim = pd.DataFrame.from_dict(dagilim_veri, orient='index', columns=YILLAR)
                 st.dataframe(df_dagilim, use_container_width=True)
-                st.caption("ℹ️ Veriler 2019-2023 yıllarını kapsamaktadır. Bazı yıllarda müfredat değişikliği olabilir.")
+                st.caption("ℹ️ Veriler 2021-2025 yıllarını kapsamaktadır. 2025 verileri MEB/ÖSYM kazanımlarına dayalı projeksiyonlardır.")
 
         st.markdown(f"**{secilen_ders}** konuları:")
         
